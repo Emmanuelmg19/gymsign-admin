@@ -24,8 +24,6 @@ export interface Socio {
   firma_path: string | null;
   contrato_aceptado: boolean;
   contrato_aceptado_en: string | null;
-  fecha_registro: string;
-  hora_registro: string;
   creado_por: string | null;
   creado_en: string;
   actualizado_en: string;

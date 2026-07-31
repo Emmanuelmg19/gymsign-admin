@@ -39,6 +39,14 @@ const esNuevo = (m: Socio) => Date.now() - new Date(m.creado_en).getTime() < 24 
 
 const inicial = (nombre: string) => (nombre ? nombre[0].toUpperCase() : "?");
 
+const fechaHoraRegistro = (creadoEn: string) => {
+  const d = new Date(creadoEn);
+  return {
+    fecha: d.toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }),
+    hora: d.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" }),
+  };
+};
+
 export default function AdminPanel() {
   // ── Auth ──────────────────────────────────────────────────────
   const [session, setSession] = useState<Session | null>(null);
@@ -232,8 +240,8 @@ export default function AdminPanel() {
   }, [members, search, filterPlan, sortField, sortDir]);
 
   const activos = members.filter(m => !m.eliminado_en);
-  const hoy = new Date().toISOString().split("T")[0];
-  const registrosMes = activos.filter(m => m.fecha_registro?.startsWith(hoy.slice(0, 7))).length;
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
+  const registrosMes = activos.filter(m => fechaHoraRegistro(m.creado_en).fecha.startsWith(hoy.slice(0, 7))).length;
   const planCount = PLANES.map(p => ({ plan: p, count: activos.filter(m => m.plan === p).length }));
   const conPad = activos.filter(m => m.padecimiento).length;
   const nuevos = activos.filter(esNuevo);
@@ -396,7 +404,7 @@ export default function AdminPanel() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <span style={{ background: PLAN_BG[m.plan], color: PLAN_COLOR[m.plan], fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, display: "block", marginBottom: 2 }}>{m.plan}</span>
-                    <span style={{ fontSize: 11, color: "#9ca3af" }}>{m.fecha_registro}</span>
+                    <span style={{ fontSize: 11, color: "#9ca3af" }}>{fechaHoraRegistro(m.creado_en).fecha}</span>
                   </div>
                 </div>
               ))}
@@ -435,7 +443,7 @@ export default function AdminPanel() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
-                      {([["nombre", "Nombre"], ["plan", "Plan"], ["email", "Email"], ["telefono", "Teléfono"], ["fecha_registro", "Registro"], ["folio", "Folio"]] as const).map(([f, l]) => (
+                      {([["nombre", "Nombre"], ["plan", "Plan"], ["email", "Email"], ["telefono", "Teléfono"], ["creado_en", "Registro"], ["folio", "Folio"]] as const).map(([f, l]) => (
                         <th key={f} onClick={() => handleSort(f as keyof Socio)}
                           style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", cursor: "pointer", whiteSpace: "nowrap", userSelect: "none" }}>
                           {l}<SortIcon field={f as keyof Socio} />
@@ -472,7 +480,7 @@ export default function AdminPanel() {
                           </td>
                           <td style={{ padding: "11px 14px", color: "#374151" }}>{m.email}</td>
                           <td style={{ padding: "11px 14px", color: "#374151", whiteSpace: "nowrap" }}>{m.telefono}</td>
-                          <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{m.fecha_registro}<br /><span style={{ fontSize: 11 }}>{m.hora_registro?.slice(0, 5)} hrs</span></td>
+                          <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{fechaHoraRegistro(m.creado_en).fecha}<br /><span style={{ fontSize: 11 }}>{fechaHoraRegistro(m.creado_en).hora}</span></td>
                           <td style={{ padding: "11px 14px", color: "#6b7280", fontFamily: "monospace", fontSize: 12 }}>{m.folio}</td>
                           <td style={{ padding: "11px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
                             <button onClick={() => setSelectedMember(m)}
@@ -525,7 +533,7 @@ export default function AdminPanel() {
             <div style={{ padding: "20px 24px" }}>
               <div style={{ marginBottom: 16 }}>
                 <span style={{ background: PLAN_BG[selectedMember.plan], color: PLAN_COLOR[selectedMember.plan], fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>{selectedMember.plan}</span>
-                <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 10 }}>Alta: {selectedMember.fecha_registro} — {selectedMember.hora_registro?.slice(0, 5)} hrs</span>
+                <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 10 }}>Alta: {fechaHoraRegistro(selectedMember.creado_en).fecha} — {fechaHoraRegistro(selectedMember.creado_en).hora}</span>
                 {selectedMember.es_menor && <span style={{ fontSize: 11, color: "#1e40af", marginLeft: 10, background: "#eff6ff", padding: "2px 8px", borderRadius: 20 }}>Menor de edad</span>}
               </div>
               {([
