@@ -36,53 +36,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Verifica el token con el cliente anon (no con service_role) — esto
-  // valida que sea una sesión real de Supabase Auth, no un valor inventado.
-  const supabaseAuth = createClient(supabaseUrl, anonKey);
-  const { data: userData, error: userError } = await supabaseAuth.auth.getUser(accessToken);
-  if (userError || !userData?.user) {
-    res.status(401).json({ error: "Sesión inválida o expirada." });
-    return;
-  }
-
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
-  const { data: staff } = await supabaseAdmin
-    .from("usuarios_staff").select("id, activo").eq("id", userData.user.id).single();
-
-  if (!staff || !staff.activo) {
-    res.status(403).json({ error: "Tu cuenta no tiene permisos de staff activos." });
-    return;
-  }
-
-  const { data: socioData, error: socioError } = await supabaseAdmin
-    .from("socios").select("*").eq("id", socio_id).single();
-
-  if (socioError || !socioData) {
-    res.status(404).json({ error: "Socio no encontrado." });
-    return;
-  }
-  const socio = socioData as Socio;
-
-  let tutor: Tutor | null = null;
-  if (socio.es_menor && socio.tutor_id) {
-    const { data } = await supabaseAdmin.from("tutores").select("*").eq("id", socio.tutor_id).single();
-    tutor = data as Tutor | null;
-  }
-
-  let firmaDataUrl: string | null = null;
-  if (socio.firma_path) {
-    const { data } = await supabaseAdmin.storage.from("firmas").download(socio.firma_path);
-    if (data) {
-      const buf = Buffer.from(await data.arrayBuffer());
-      firmaDataUrl = `data:image/png;base64,${buf.toString("base64")}`;
-    }
-  }
-
-  const html = buildContractHTML(socio, tutor, firmaDataUrl);
-
   let browser;
   try {
+    // Verifica el token con el cliente anon (no con service_role) — esto
+    // valida que sea una sesión real de Supabase Auth, no un valor inventado.
+    const supabaseAuth = createClient(supabaseUrl, anonKey);
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(accessToken);
+    if (userError || !userData?.user) {
+      res.status(401).json({ error: "Sesión inválida o expirada." });
+      return;
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data: staff } = await supabaseAdmin
+      .from("usuarios_staff").select("id, activo").eq("id", userData.user.id).single();
+
+    if (!staff || !staff.activo) {
+      res.status(403).json({ error: "Tu cuenta no tiene permisos de staff activos." });
+      return;
+    }
+
+    const { data: socioData, error: socioError } = await supabaseAdmin
+      .from("socios").select("*").eq("id", socio_id).single();
+
+    if (socioError || !socioData) {
+      res.status(404).json({ error: "Socio no encontrado." });
+      return;
+    }
+    const socio = socioData as Socio;
+
+    let tutor: Tutor | null = null;
+    if (socio.es_menor && socio.tutor_id) {
+      const { data } = await supabaseAdmin.from("tutores").select("*").eq("id", socio.tutor_id).single();
+      tutor = data as Tutor | null;
+    }
+
+    let firmaDataUrl: string | null = null;
+    if (socio.firma_path) {
+      const { data } = await supabaseAdmin.storage.from("firmas").download(socio.firma_path);
+      if (data) {
+        const buf = Buffer.from(await data.arrayBuffer());
+        firmaDataUrl = `data:image/png;base64,${buf.toString("base64")}`;
+      }
+    }
+
+    const html = buildContractHTML(socio, tutor, firmaDataUrl);
+
     chromium.setHeadlessMode = true;
     chromium.setGraphicsMode = false;
 
@@ -106,7 +106,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader("Content-Disposition", `attachment; filename="Contrato_${socio.folio}.pdf"`);
     res.status(200).send(pdf);
   } catch (err: any) {
-    res.status(500).json({ error: `No se pudo generar el PDF: ${err?.message || "error desconocido"}` });
+    console.error("generar-contrato-pdf falló:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: `No se pudo generar el PDF: ${err?.message || "error desconocido"}` });
+    }
   } finally {
     if (browser) await browser.close();
   }
