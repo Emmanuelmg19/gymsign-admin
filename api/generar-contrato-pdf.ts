@@ -6,8 +6,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
-import { buildContractHTML } from "../src/contrato";
-import type { Socio, Tutor } from "../src/types";
+import { buildContractHTML } from "../src/contrato.js";
+import type { Socio, Tutor } from "../src/types.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
