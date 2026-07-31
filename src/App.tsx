@@ -1,18 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
-import type { Plan, Socio, Tutor, UsuarioStaff } from "./types";
-import { buildContractHTML } from "./contrato";
-import NuevoSocio from "./NuevoSocio";
-
-function blobToDataURL(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
+import type { Plan, Socio, UsuarioStaff } from "./types";
 
 const PLAN_COLOR: Record<Plan, string> = {
   "Mensual": "#3b82f6",
@@ -87,9 +76,8 @@ export default function AdminPanel() {
   const [selectedMember, setSelectedMember] = useState<Socio | null>(null);
   const [firmaUrl, setFirmaUrl] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Socio | null>(null);
-  const [activeTab, setActiveTab] = useState<"socios" | "estadisticas" | "nuevo">("socios");
+  const [activeTab, setActiveTab] = useState<"socios" | "estadisticas">("socios");
   const [actionError, setActionError] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -141,75 +129,6 @@ export default function AdminPanel() {
     if (error) { setActionError(`No se pudo restaurar: ${error.message}`); return; }
     loadMembers();
   };
-
-  const descargarContrato = async (m: Socio) => {
-    setActionError(null);
-    setDownloadingId(m.id);
-    try {
-      let tutor: Tutor | null = null;
-      if (m.es_menor && m.tutor_id) {
-        const { data, error } = await supabase.from("tutores").select("*").eq("id", m.tutor_id).single();
-        if (error) throw new Error(`No se pudo obtener los datos del tutor: ${error.message}`);
-        tutor = data as Tutor;
-      }
-
-      let firmaDataUrl: string | null = null;
-      if (m.firma_path) {
-        const { data, error } = await supabase.storage.from("firmas").download(m.firma_path);
-        if (error) throw new Error(`No se pudo obtener la firma: ${error.message}`);
-        firmaDataUrl = await blobToDataURL(data);
-      }
-
-      const html = buildContractHTML(m, tutor, firmaDataUrl);
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Contrato_${m.nombre}_${m.apellido_paterno}_${m.folio}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setActionError(err.message || "No se pudo generar el contrato.");
-    } finally {
-      setDownloadingId(null);
-    }
-  };
-
-  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
-
-  const descargarPDF = async (m: Socio) => {
-    setActionError(null);
-    setDownloadingPdfId(m.id);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) throw new Error("Sesión no válida. Vuelve a iniciar sesión.");
-
-      const resp = await fetch("/api/generar-contrato-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ socio_id: m.id }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `Error ${resp.status}`);
-      }
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Contrato_${m.folio}.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setActionError(err.message || "No se pudo generar el PDF.");
-    } finally {
-      setDownloadingPdfId(null);
-    }
-  };
-
 
   const filtered = useMemo(() => {
     let list = [...members];
@@ -338,10 +257,10 @@ export default function AdminPanel() {
       )}
 
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "0 20px", display: "flex" }}>
-        {(["socios", "estadisticas", "nuevo"] as const).map(t => (
+        {(["socios", "estadisticas"] as const).map(t => (
           <button key={t} onClick={() => setActiveTab(t)}
             style={{ padding: "14px 18px", border: "none", borderBottom: `2px solid ${activeTab === t ? "#111827" : "transparent"}`, background: "none", color: activeTab === t ? "#111827" : "#6b7280", fontWeight: activeTab === t ? 700 : 400, fontSize: 14, cursor: "pointer" }}>
-            {t === "socios" ? "👥 Socios" : t === "estadisticas" ? "📊 Estadísticas" : "➕ Registrar Socio"}
+            {t === "socios" ? "👥 Socios" : "📊 Estadísticas"}
           </button>
         ))}
       </div>
@@ -402,10 +321,6 @@ export default function AdminPanel() {
               ))}
             </div>
           </div>
-        )}
-
-        {activeTab === "nuevo" && (
-          <NuevoSocio onDone={() => setActiveTab("socios")} />
         )}
 
         {activeTab === "socios" && (
@@ -479,14 +394,6 @@ export default function AdminPanel() {
                               style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", marginRight: 6 }}>
                               👁 Ver
                             </button>
-                            <button onClick={() => descargarContrato(m)} disabled={downloadingId === m.id}
-                              style={{ background: "#eff6ff", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#1e40af", cursor: downloadingId === m.id ? "default" : "pointer", marginRight: 6, opacity: downloadingId === m.id ? 0.6 : 1 }}>
-                              {downloadingId === m.id ? "⏳" : "📄"} HTML
-                            </button>
-                            <button onClick={() => descargarPDF(m)} disabled={downloadingPdfId === m.id}
-                              style={{ background: "#f0fdf4", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#166534", cursor: downloadingPdfId === m.id ? "default" : "pointer", marginRight: 6, opacity: downloadingPdfId === m.id ? 0.6 : 1 }}>
-                              {downloadingPdfId === m.id ? "⏳" : "🖨️"} PDF
-                            </button>
                             {eliminado ? (
                               <button onClick={() => restaurar(m)}
                                 style={{ background: "#f0fdf4", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#166534", cursor: "pointer" }}>
@@ -557,15 +464,7 @@ export default function AdminPanel() {
                   <p style={{ margin: 0, fontSize: 13, color: "#991b1b" }}>🗑️ Eliminado el {new Date(selectedMember.eliminado_en).toLocaleString("es-MX")}</p>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-                <button onClick={() => descargarContrato(selectedMember)} disabled={downloadingId === selectedMember.id}
-                  style={{ flex: 1, minWidth: 130, padding: "11px 0", background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: downloadingId === selectedMember.id ? "default" : "pointer", opacity: downloadingId === selectedMember.id ? 0.6 : 1 }}>
-                  {downloadingId === selectedMember.id ? "⏳ Generando…" : "📄 HTML"}
-                </button>
-                <button onClick={() => descargarPDF(selectedMember)} disabled={downloadingPdfId === selectedMember.id}
-                  style={{ flex: 1, minWidth: 130, padding: "11px 0", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: downloadingPdfId === selectedMember.id ? "default" : "pointer", opacity: downloadingPdfId === selectedMember.id ? 0.6 : 1 }}>
-                  {downloadingPdfId === selectedMember.id ? "⏳ Generando…" : "🖨️ PDF"}
-                </button>
+              <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
                 {selectedMember.eliminado_en ? (
                   <button onClick={() => { restaurar(selectedMember); setSelectedMember(null); }}
                     style={{ flex: 1, padding: "11px 0", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>

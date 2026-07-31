@@ -40,8 +40,6 @@ export interface Tutor {
   telefono: string;
   email: string | null;
   parentesco: string | null;
-  tipo_identificacion: TipoIdentificacion;
-  numero_identificacion: string;
 }
 
 export interface UsuarioStaff {
