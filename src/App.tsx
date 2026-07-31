@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 import type { Plan, Socio, Tutor, UsuarioStaff } from "./types";
-import { buildContractHTML } from "./contrato";
 import NuevoSocio from "./NuevoSocio";
 
 function blobToDataURL(blob: Blob): Promise<string> {
@@ -97,7 +96,6 @@ export default function AdminPanel() {
   const [deleteConfirm, setDeleteConfirm] = useState<Socio | null>(null);
   const [activeTab, setActiveTab] = useState<"socios" | "estadisticas" | "nuevo">("socios");
   const [actionError, setActionError] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
@@ -150,40 +148,6 @@ export default function AdminPanel() {
     loadMembers();
   };
 
-  const descargarContrato = async (m: Socio) => {
-    setActionError(null);
-    setDownloadingId(m.id);
-    try {
-      let tutor: Tutor | null = null;
-      if (m.es_menor && m.tutor_id) {
-        const { data, error } = await supabase.from("tutores").select("*").eq("id", m.tutor_id).single();
-        if (error) throw new Error(`No se pudo obtener los datos del tutor: ${error.message}`);
-        tutor = data as Tutor;
-      }
-
-      let firmaDataUrl: string | null = null;
-      if (m.firma_path) {
-        const { data, error } = await supabase.storage.from("firmas").download(m.firma_path);
-        if (error) throw new Error(`No se pudo obtener la firma: ${error.message}`);
-        firmaDataUrl = await blobToDataURL(data);
-      }
-
-      const html = buildContractHTML(m, tutor, firmaDataUrl);
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Contrato_${m.nombre}_${m.apellido_paterno}_${m.folio}.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setActionError(err.message || "No se pudo generar el contrato.");
-    } finally {
-      setDownloadingId(null);
-    }
-  };
 
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
 
@@ -487,10 +451,7 @@ export default function AdminPanel() {
                               style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", marginRight: 6 }}>
                               👁 Ver
                             </button>
-                            <button onClick={() => descargarContrato(m)} disabled={downloadingId === m.id}
-                              style={{ background: "#eff6ff", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#1e40af", cursor: downloadingId === m.id ? "default" : "pointer", marginRight: 6, opacity: downloadingId === m.id ? 0.6 : 1 }}>
-                              {downloadingId === m.id ? "⏳" : "📄"} HTML
-                            </button>
+
                             <button onClick={() => descargarPDF(m)} disabled={downloadingPdfId === m.id}
                               style={{ background: "#f0fdf4", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#166534", cursor: downloadingPdfId === m.id ? "default" : "pointer", marginRight: 6, opacity: downloadingPdfId === m.id ? 0.6 : 1 }}>
                               {downloadingPdfId === m.id ? "⏳" : "🖨️"} PDF
@@ -566,10 +527,7 @@ export default function AdminPanel() {
                 </div>
               )}
               <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-                <button onClick={() => descargarContrato(selectedMember)} disabled={downloadingId === selectedMember.id}
-                  style={{ flex: 1, minWidth: 130, padding: "11px 0", background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: downloadingId === selectedMember.id ? "default" : "pointer", opacity: downloadingId === selectedMember.id ? 0.6 : 1 }}>
-                  {downloadingId === selectedMember.id ? "⏳ Generando…" : "📄 HTML"}
-                </button>
+
                 <button onClick={() => descargarPDF(selectedMember)} disabled={downloadingPdfId === selectedMember.id}
                   style={{ flex: 1, minWidth: 130, padding: "11px 0", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: downloadingPdfId === selectedMember.id ? "default" : "pointer", opacity: downloadingPdfId === selectedMember.id ? 0.6 : 1 }}>
                   {downloadingPdfId === selectedMember.id ? "⏳ Generando…" : "🖨️ PDF"}
