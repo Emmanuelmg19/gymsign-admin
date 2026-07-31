@@ -97,8 +97,8 @@ export function buildAvisoPrivacidad(): string[] {
 export function buildContractHTML(socio: Socio, tutor: Tutor | null, firmaDataUrl: string | null): string {
   const nombreCompleto = esc(nombreCompletoSocio(socio));
   const fecha = new Date(socio.creado_en);
-  const dateStr = fecha.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
-  const timeStr = fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = fecha.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
+  const timeStr = fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" });
 
   const rows: [string, string][] = [
     ["Nombre completo", nombreCompleto],
