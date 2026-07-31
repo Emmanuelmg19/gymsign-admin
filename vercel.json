@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/generar-contrato-pdf.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
+}
