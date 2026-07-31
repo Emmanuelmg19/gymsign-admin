@@ -104,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="Contrato_${socio.folio}.pdf"`);
-    res.status(200).send(pdf);
+    res.status(200).send(Buffer.from(pdf));
   } catch (err: any) {
     console.error("generar-contrato-pdf falló:", err);
     if (!res.headersSent) {
