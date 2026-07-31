@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import type { Plan, Socio, TipoIdentificacion, Tutor } from "./types";
-import { buildAvisoPrivacidad, buildConsentimientoAdulto, buildConsentimientoMenor, buildContractHTML, fechaContratoMX, nombreCompletoSocio } from "./contrato";
+import { buildAvisoPrivacidad, buildConsentimientoAdulto, buildConsentimientoMenor, fechaContratoMX, nombreCompletoSocio } from "./contrato";
 
 const STEPS = ["Datos del Socio", "Contrato & T&C", "Firma Digital", "Confirmación"];
 const PLANES: Plan[] = ["Mensual", "Inscripción", "Promoción por pago puntual", "Semana", "Quincena", "Visita"];
@@ -283,17 +283,6 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const descargarContratoLocal = () => {
-    if (!savedSocio) return;
-    const html = buildContractHTML(savedSocio, savedTutor, signatureData);
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Contrato_${savedSocio.nombre}_${savedSocio.apellido_paterno}_${savedSocio.folio}.html`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   const reset = () => {
     setStep(0); setForm(initialForm); setAccepted(false); setSigned(false);
@@ -314,10 +303,7 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
           {descargandoPdf ? "⏳ Generando…" : "🖨️ Descargar PDF"}
         </button>
         {pdfError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{pdfError}</p>}
-        <button onClick={descargarContratoLocal}
-          style={{ padding: "12px 0", background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-          📄 Descargar contrato (HTML)
-        </button>
+
         <button onClick={reset}
           style={{ padding: "12px 0", background: "#111827", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
           + Registrar otro socio
