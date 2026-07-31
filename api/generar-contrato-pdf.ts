@@ -83,14 +83,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const html = buildContractHTML(socio, tutor, firmaDataUrl);
 
-    chromium.setHeadlessMode = true;
     chromium.setGraphicsMode = false;
 
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: { width: 1200, height: 1600 },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless as boolean | "shell",
+      headless: "shell",
     });
     const page = await browser.newPage();
     // El HTML es autocontenido (estilos inline, firma como data URI), así
