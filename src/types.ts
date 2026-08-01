@@ -1,4 +1,14 @@
-export type Plan = "Mensual" | "Inscripción" | "Promoción por pago puntual" | "Semana" | "Quincena" | "Visita";
+export type Plan = "Mensual" | "Semana" | "Quincena" | "Visita";
+
+// Duración de cada plan en días, usada para calcular la fecha de vencimiento
+// derivada de creado_en (no se guarda en la base de datos, igual que se hizo
+// con fecha_registro/hora_registro — se deriva siempre de creado_en).
+export const DURACION_PLAN_DIAS: Record<Plan, number> = {
+  Mensual: 30,
+  Quincena: 15,
+  Semana: 7,
+  Visita: 1,
+};
 export type EstadoMX =
   | "Aguascalientes" | "Baja California" | "Baja California Sur" | "Campeche" | "Chiapas"
   | "Chihuahua" | "Ciudad de México" | "Coahuila" | "Colima" | "Durango" | "Guanajuato"
@@ -32,6 +42,8 @@ export interface Socio {
   telefono_emergencia: string | null;
   padecimiento: string | null;
   plan: Plan;
+  incluye_inscripcion: boolean;
+  promocion_pago_puntual: boolean;
   es_menor: boolean;
   tutor_id: string | null;
   firma_path: string | null;

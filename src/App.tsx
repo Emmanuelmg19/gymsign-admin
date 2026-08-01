@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 import type { Plan, Socio, Tutor, UsuarioStaff } from "./types";
-import { ESTADOS_MX } from "./types";
+import { DURACION_PLAN_DIAS, ESTADOS_MX } from "./types";
 import NuevoSocio from "./NuevoSocio";
 
 function blobToDataURL(blob: Blob): Promise<string> {
@@ -16,24 +16,41 @@ function blobToDataURL(blob: Blob): Promise<string> {
 
 const PLAN_COLOR: Record<Plan, string> = {
   "Mensual": "#3b82f6",
-  "Inscripción": "#8b5cf6",
-  "Promoción por pago puntual": "#f59e0b",
   "Semana": "#10b981",
   "Quincena": "#06b6d4",
   "Visita": "#6b7280",
 };
 const PLAN_BG: Record<Plan, string> = {
   "Mensual": "#eff6ff",
-  "Inscripción": "#f5f3ff",
-  "Promoción por pago puntual": "#fffbeb",
   "Semana": "#f0fdf4",
   "Quincena": "#ecfeff",
   "Visita": "#f3f4f6",
 };
-const PLANES: Plan[] = ["Mensual", "Inscripción", "Promoción por pago puntual", "Semana", "Quincena", "Visita"];
+const PLANES: Plan[] = ["Mensual", "Semana", "Quincena", "Visita"];
 
 const nombreCompleto = (m: Pick<Socio, "nombre" | "apellido_paterno" | "apellido_materno">) =>
   [m.nombre, m.apellido_paterno, m.apellido_materno].filter(Boolean).join(" ");
+
+// Vencimiento derivado de creado_en + duración del plan — nunca se guarda en la BD,
+// mismo patrón que ya se usó para dejar de guardar fecha_registro/hora_registro.
+const fechaVencimiento = (m: Pick<Socio, "creado_en" | "plan">): Date => {
+  const inicio = new Date(m.creado_en);
+  const dias = DURACION_PLAN_DIAS[m.plan];
+  const venc = new Date(inicio);
+  venc.setDate(venc.getDate() + dias);
+  return venc;
+};
+
+const formatoVencimiento = (m: Pick<Socio, "creado_en" | "plan">): string =>
+  fechaVencimiento(m).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Mexico_City" });
+
+const planLabel = (m: Pick<Socio, "plan" | "incluye_inscripcion" | "promocion_pago_puntual">): string => {
+  const extras = [
+    m.incluye_inscripcion ? "Inscripción" : null,
+    m.promocion_pago_puntual ? "Promoción por pago puntual" : null,
+  ].filter(Boolean);
+  return extras.length ? `${m.plan} (+ ${extras.join(", ")})` : m.plan;
+};
 
 const esNuevo = (m: Socio) => Date.now() - new Date(m.creado_en).getTime() < 24 * 60 * 60 * 1000;
 
@@ -153,6 +170,7 @@ export default function AdminPanel() {
   const [editForm, setEditForm] = useState({
     email: "", telefono: "", direccion: "", estado: "", municipio: "",
     contacto_emergencia: "", telefono_emergencia: "", padecimiento: "", plan: "Mensual" as Plan,
+    incluye_inscripcion: false, promocion_pago_puntual: false,
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -163,6 +181,7 @@ export default function AdminPanel() {
       email: m.email, telefono: m.telefono, direccion: m.direccion || "", estado: m.estado,
       municipio: m.municipio, contacto_emergencia: m.contacto_emergencia || "",
       telefono_emergencia: m.telefono_emergencia || "", padecimiento: m.padecimiento || "", plan: m.plan,
+      incluye_inscripcion: m.incluye_inscripcion, promocion_pago_puntual: m.promocion_pago_puntual,
     });
     setEditingMember(m);
   };
@@ -182,6 +201,8 @@ export default function AdminPanel() {
       p_telefono_emergencia: editForm.telefono_emergencia.trim() || null,
       p_padecimiento: editForm.padecimiento.trim() || null,
       p_plan: editForm.plan,
+      p_incluye_inscripcion: editForm.incluye_inscripcion,
+      p_promocion_pago_puntual: editForm.promocion_pago_puntual,
     });
     setSavingEdit(false);
     if (error) { setEditError(error.message || "No se pudo guardar la edición."); return; }
@@ -408,7 +429,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <span style={{ background: PLAN_BG[m.plan], color: PLAN_COLOR[m.plan], fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, display: "block", marginBottom: 2 }}>{m.plan}</span>
+                    <span style={{ background: PLAN_BG[m.plan], color: PLAN_COLOR[m.plan], fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, display: "block", marginBottom: 2 }}>{planLabel(m)}</span>
                     <span style={{ fontSize: 11, color: "#9ca3af" }}>{fechaHoraRegistro(m.creado_en).fecha}</span>
                   </div>
                 </div>
@@ -454,12 +475,15 @@ export default function AdminPanel() {
                           {l}<SortIcon field={f as keyof Socio} />
                         </th>
                       ))}
+                      <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
+                        Vencimiento
+                      </th>
                       <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase" }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.length === 0 ? (
-                      <tr><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 14 }}>No se encontraron socios.</td></tr>
+                      <tr><td colSpan={8} style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 14 }}>No se encontraron socios.</td></tr>
                     ) : filtered.map((m, i) => {
                       const nuevo = esNuevo(m);
                       const eliminado = !!m.eliminado_en;
@@ -482,11 +506,17 @@ export default function AdminPanel() {
                           </td>
                           <td style={{ padding: "11px 14px" }}>
                             <span style={{ background: PLAN_BG[m.plan], color: PLAN_COLOR[m.plan], fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 20, whiteSpace: "nowrap" }}>{m.plan}</span>
+                            {(m.incluye_inscripcion || m.promocion_pago_puntual) && (
+                              <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 3 }}>
+                                {[m.incluye_inscripcion && "+ Inscripción", m.promocion_pago_puntual && "+ Promoción pago puntual"].filter(Boolean).join(" · ")}
+                              </div>
+                            )}
                           </td>
                           <td style={{ padding: "11px 14px", color: "#374151" }}>{m.email}</td>
                           <td style={{ padding: "11px 14px", color: "#374151", whiteSpace: "nowrap" }}>{m.telefono}</td>
                           <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{fechaHoraRegistro(m.creado_en).fecha}<br /><span style={{ fontSize: 11 }}>{fechaHoraRegistro(m.creado_en).hora}</span></td>
                           <td style={{ padding: "11px 14px", color: "#6b7280", fontFamily: "monospace", fontSize: 12 }}>{m.folio}</td>
+                          <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{formatoVencimiento(m)}</td>
                           <td style={{ padding: "11px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
                             <button onClick={() => setSelectedMember(m)}
                               style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", marginRight: 6 }}>
@@ -540,8 +570,9 @@ export default function AdminPanel() {
             </div>
             <div style={{ padding: "20px 24px" }}>
               <div style={{ marginBottom: 16 }}>
-                <span style={{ background: PLAN_BG[selectedMember.plan], color: PLAN_COLOR[selectedMember.plan], fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>{selectedMember.plan}</span>
+                <span style={{ background: PLAN_BG[selectedMember.plan], color: PLAN_COLOR[selectedMember.plan], fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>{planLabel(selectedMember)}</span>
                 <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 10 }}>Alta: {fechaHoraRegistro(selectedMember.creado_en).fecha} — {fechaHoraRegistro(selectedMember.creado_en).hora}</span>
+                <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 10 }}>Vence: {formatoVencimiento(selectedMember)}</span>
                 {selectedMember.es_menor && <span style={{ fontSize: 11, color: "#1e40af", marginLeft: 10, background: "#eff6ff", padding: "2px 8px", borderRadius: 20 }}>Menor de edad</span>}
               </div>
               {([
@@ -685,12 +716,22 @@ export default function AdminPanel() {
                 <input type="text" value={editForm.padecimiento} onChange={e => setEditForm(f => ({ ...f, padecimiento: e.target.value }))}
                   style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
               </div>
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Plan</label>
                 <select value={editForm.plan} onChange={e => setEditForm(f => ({ ...f, plan: e.target.value as Plan }))}
                   style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", background: "#fff", outline: "none" }}>
                   {PLANES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editForm.incluye_inscripcion} onChange={e => setEditForm(f => ({ ...f, incluye_inscripcion: e.target.checked }))} />
+                  Incluye cuota de inscripción
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
+                  <input type="checkbox" checked={editForm.promocion_pago_puntual} onChange={e => setEditForm(f => ({ ...f, promocion_pago_puntual: e.target.checked }))} />
+                  Aplica promoción por pago puntual
+                </label>
               </div>
               {editError && <p style={{ color: "#ef4444", fontSize: 12, margin: "0 0 14px" }}>{editError}</p>}
               <div style={{ display: "flex", gap: 10 }}>

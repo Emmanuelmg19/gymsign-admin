@@ -92,6 +92,14 @@ export function buildAvisoPrivacidad(): string[] {
   ];
 }
 
+function planLabelSocio(socio: Socio): string {
+  const extras = [
+    socio.incluye_inscripcion ? "Inscripción" : null,
+    socio.promocion_pago_puntual ? "Promoción por pago puntual" : null,
+  ].filter(Boolean);
+  return extras.length ? `${socio.plan} (+ ${extras.join(", ")})` : socio.plan;
+}
+
 // Genera el HTML imprimible completo a partir de un socio ya guardado
 // en la base de datos (usado por el botón "Descargar contrato" del panel).
 export function buildContractHTML(socio: Socio, tutor: Tutor | null, firmaDataUrl: string | null): string {
@@ -106,7 +114,7 @@ export function buildContractHTML(socio: Socio, tutor: Tutor | null, firmaDataUr
     ["Correo electrónico", esc(socio.email)],
     ["Teléfono", esc(socio.telefono)],
     ["Fecha de nacimiento", formatoFechaMX(socio.fecha_nacimiento)],
-    ["Plan contratado", esc(socio.plan)],
+    ["Plan contratado", esc(planLabelSocio(socio))],
     ["Dirección", esc(socio.direccion) || "—"],
     ["Municipio / Estado", `${esc(socio.municipio) || "—"}, ${esc(socio.estado)}`],
     ["Nombre de contacto de emergencia", socio.contacto_emergencia ? `${esc(socio.contacto_emergencia)} – ${esc(socio.telefono_emergencia)}` : "—"],
@@ -160,7 +168,7 @@ td .v{font-size:13px;color:#111827;font-weight:500}
   <td><span class="l">Fecha y hora de firma</span>
     <p style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px">${dateStr}</p>
     <p style="font-size:12px;color:#374151;margin-bottom:6px">${timeStr} hrs</p>
-    <p style="font-size:11px;color:#6b7280">Plan: ${socio.plan}</p></td>
+    <p style="font-size:11px;color:#6b7280">Plan: ${esc(planLabelSocio(socio))}</p></td>
 </tr></table>
 <div class="footer">Documento generado digitalmente por GymSign para Sport Platinium &nbsp;•&nbsp; Folio ${socio.folio} &nbsp;•&nbsp; ${dateStr}</div>
 <button class="print-btn" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
