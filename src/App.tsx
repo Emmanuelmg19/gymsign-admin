@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 import type { Plan, Socio, Tutor, UsuarioStaff } from "./types";
+import { ESTADOS_MX } from "./types";
 import NuevoSocio from "./NuevoSocio";
 
 function blobToDataURL(blob: Blob): Promise<string> {
@@ -148,6 +149,46 @@ export default function AdminPanel() {
     loadMembers();
   };
 
+  const [editingMember, setEditingMember] = useState<Socio | null>(null);
+  const [editForm, setEditForm] = useState({
+    email: "", telefono: "", direccion: "", estado: "", municipio: "",
+    contacto_emergencia: "", telefono_emergencia: "", padecimiento: "", plan: "Mensual" as Plan,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const abrirEdicion = (m: Socio) => {
+    setEditError(null);
+    setEditForm({
+      email: m.email, telefono: m.telefono, direccion: m.direccion || "", estado: m.estado,
+      municipio: m.municipio, contacto_emergencia: m.contacto_emergencia || "",
+      telefono_emergencia: m.telefono_emergencia || "", padecimiento: m.padecimiento || "", plan: m.plan,
+    });
+    setEditingMember(m);
+  };
+
+  const guardarEdicion = async () => {
+    if (!editingMember) return;
+    setEditError(null);
+    setSavingEdit(true);
+    const { error } = await supabase.rpc("editar_socio_contacto", {
+      p_socio_id: editingMember.id,
+      p_email: editForm.email.trim(),
+      p_telefono: editForm.telefono.trim(),
+      p_direccion: editForm.direccion.trim() || null,
+      p_estado: editForm.estado,
+      p_municipio: editForm.municipio.trim(),
+      p_contacto_emergencia: editForm.contacto_emergencia.trim() || null,
+      p_telefono_emergencia: editForm.telefono_emergencia.trim() || null,
+      p_padecimiento: editForm.padecimiento.trim() || null,
+      p_plan: editForm.plan,
+    });
+    setSavingEdit(false);
+    if (error) { setEditError(error.message || "No se pudo guardar la edición."); return; }
+    if (selectedMember?.id === editingMember.id) setSelectedMember(null);
+    setEditingMember(null);
+    loadMembers();
+  };
 
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
 
@@ -451,6 +492,12 @@ export default function AdminPanel() {
                               style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", marginRight: 6 }}>
                               👁 Ver
                             </button>
+                            {!eliminado && (
+                              <button onClick={() => abrirEdicion(m)}
+                                style={{ background: "#fffbeb", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#92400e", cursor: "pointer", marginRight: 6 }}>
+                                ✏️ Editar
+                              </button>
+                            )}
 
                             <button onClick={() => descargarPDF(m)} disabled={downloadingPdfId === m.id}
                               style={{ background: "#f0fdf4", border: "none", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, color: "#166534", cursor: downloadingPdfId === m.id ? "default" : "pointer", marginRight: 6, opacity: downloadingPdfId === m.id ? 0.6 : 1 }}>
@@ -527,7 +574,12 @@ export default function AdminPanel() {
                 </div>
               )}
               <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-
+                {!selectedMember.eliminado_en && (
+                  <button onClick={() => abrirEdicion(selectedMember)}
+                    style={{ flex: 1, minWidth: 130, padding: "11px 0", background: "#fffbeb", color: "#92400e", border: "1px solid #fde68a", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    ✏️ Editar
+                  </button>
+                )}
                 <button onClick={() => descargarPDF(selectedMember)} disabled={downloadingPdfId === selectedMember.id}
                   style={{ flex: 1, minWidth: 130, padding: "11px 0", background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: downloadingPdfId === selectedMember.id ? "default" : "pointer", opacity: downloadingPdfId === selectedMember.id ? 0.6 : 1 }}>
                   {downloadingPdfId === selectedMember.id ? "⏳ Generando…" : "🖨️ PDF"}
@@ -566,6 +618,89 @@ export default function AdminPanel() {
                 style={{ flex: 1, padding: "11px 0", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
               <button onClick={() => confirmDelete(deleteConfirm)}
                 style={{ flex: 1, padding: "11px 0", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingMember && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setEditingMember(null)}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 60px rgba(0,0,0,.25)" }}>
+            <div style={{ background: "#111827", borderRadius: "16px 16px 0 0", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ color: "#fff", margin: 0, fontSize: 16, fontWeight: 700 }}>Editar socio</h3>
+                <p style={{ color: "#9ca3af", margin: "3px 0 0", fontSize: 12 }}>{nombreCompleto(editingMember)} — {editingMember.folio}</p>
+              </div>
+              <button onClick={() => setEditingMember(null)}
+                style={{ background: "#374151", border: "none", borderRadius: 8, color: "#fff", width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#1e40af" }}>Solo datos de contacto y plan. Nombre, identificación y fecha de nacimiento no son editables aquí porque ya están en el contrato firmado.</p>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Correo electrónico</label>
+                <input type="text" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Teléfono</label>
+                <input type="text" value={editForm.telefono} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Dirección</label>
+                <input type="text" value={editForm.direccion} onChange={e => setEditForm(f => ({ ...f, direccion: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Estado</label>
+                  <select value={editForm.estado} onChange={e => setEditForm(f => ({ ...f, estado: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", background: "#fff", outline: "none" }}>
+                    {ESTADOS_MX.map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Municipio</label>
+                  <input type="text" value={editForm.municipio} onChange={e => setEditForm(f => ({ ...f, municipio: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Contacto de emergencia</label>
+                  <input type="text" value={editForm.contacto_emergencia} onChange={e => setEditForm(f => ({ ...f, contacto_emergencia: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Teléfono de emergencia</label>
+                  <input type="text" value={editForm.telefono_emergencia} onChange={e => setEditForm(f => ({ ...f, telefono_emergencia: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Padecimiento médico</label>
+                <input type="text" value={editForm.padecimiento} onChange={e => setEditForm(f => ({ ...f, padecimiento: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#6b7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Plan</label>
+                <select value={editForm.plan} onChange={e => setEditForm(f => ({ ...f, plan: e.target.value as Plan }))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, color: "#111827", background: "#fff", outline: "none" }}>
+                  {PLANES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              {editError && <p style={{ color: "#ef4444", fontSize: 12, margin: "0 0 14px" }}>{editError}</p>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setEditingMember(null)}
+                  style={{ flex: 1, padding: "11px 0", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
+                <button onClick={guardarEdicion} disabled={savingEdit}
+                  style={{ flex: 1, padding: "11px 0", background: savingEdit ? "#9ca3af" : "#111827", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: savingEdit ? "default" : "pointer" }}>
+                  {savingEdit ? "Guardando…" : "Guardar cambios"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
