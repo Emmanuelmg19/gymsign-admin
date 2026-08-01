@@ -1,4 +1,17 @@
 export type Plan = "Mensual" | "Inscripción" | "Promoción por pago puntual" | "Semana" | "Quincena" | "Visita";
+export type EstadoMX =
+  | "Aguascalientes" | "Baja California" | "Baja California Sur" | "Campeche" | "Chiapas"
+  | "Chihuahua" | "Ciudad de México" | "Coahuila" | "Colima" | "Durango" | "Guanajuato"
+  | "Guerrero" | "Hidalgo" | "Jalisco" | "México" | "Michoacán" | "Morelos" | "Nayarit"
+  | "Nuevo León" | "Oaxaca" | "Puebla" | "Querétaro" | "Quintana Roo" | "San Luis Potosí"
+  | "Sinaloa" | "Sonora" | "Tabasco" | "Tamaulipas" | "Tlaxcala" | "Veracruz" | "Yucatán" | "Zacatecas";
+export const ESTADOS_MX: EstadoMX[] = [
+  "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
+  "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Guanajuato",
+  "Guerrero", "Hidalgo", "Jalisco", "México", "Michoacán", "Morelos", "Nayarit",
+  "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí",
+  "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas",
+];
 export type TipoIdentificacion = "INE" | "CURP" | "Pasaporte" | "Licencia" | "Visa";
 
 export interface Socio {
