@@ -18,6 +18,7 @@ export default function AdminPanel() {
   // ── Auth ──────────────────────────────────────────────────────
   const [session, setSession] = useState<Session | null>(null);
   const [staffProfile, setStaffProfile] = useState<UsuarioStaff | null>(null);
+  const [staffProfileLoading, setStaffProfileLoading] = useState(true);
   const [authLoading, setAuthLoading] = useState(true);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPass, setLoginPass] = useState("");
@@ -36,9 +37,10 @@ export default function AdminPanel() {
   }, []);
 
   useEffect(() => {
-    if (!session) { setStaffProfile(null); return; }
+    if (!session) { setStaffProfile(null); setStaffProfileLoading(false); return; }
+    setStaffProfileLoading(true);
     supabase.from("usuarios_staff").select("*").eq("id", session.user.id).single()
-      .then(({ data }) => setStaffProfile(data as UsuarioStaff | null));
+      .then(({ data }) => { setStaffProfile(data as UsuarioStaff | null); setStaffProfileLoading(false); });
   }, [session]);
 
   const handleLogin = async () => {
@@ -255,7 +257,7 @@ export default function AdminPanel() {
         onRefresh={loadMembers} onLogout={handleLogout}
       />
 
-      {!staffProfile && (
+      {!staffProfile && !staffProfileLoading && (
         <div style={{ background: "#fef2f2", borderBottom: "1px solid #fecaca", padding: "10px 20px" }}>
           <p style={{ margin: 0, fontSize: 13, color: "#991b1b" }}>⚠️ Tu cuenta inició sesión correctamente pero no tiene un perfil en <code>usuarios_staff</code>. Pide a un administrador que te dé de alta ahí para ver tu nombre y quedar registrado en la auditoría.</p>
         </div>
