@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
-import type { Plan, Socio, UsuarioStaff } from "./types";
+import type { Socio, UsuarioStaff } from "./types";
 import NuevoSocio from "./NuevoSocio";
 import LoginScreen from "./components/LoginScreen";
 import Topbar from "./components/Topbar";
@@ -10,7 +10,7 @@ import MembersTable from "./components/MembersTable";
 import MemberDetailModal from "./components/MemberDetailModal";
 import DeleteConfirmModal from "./components/DeleteConfirmModal";
 import EditMemberModal, { type EditForm } from "./components/EditMemberModal";
-import { PLANES, nombreCompleto, esNuevo, fechaHoraRegistro } from "./lib/format";
+import { nombreCompleto, esNuevo, fechaHoraRegistro } from "./lib/format";
 
 const PAGE_SIZE = 20;
 
@@ -56,7 +56,6 @@ export default function AdminPanel() {
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterPlan, setFilterPlan] = useState<"Todos" | Plan>("Todos");
   const [sortField, setSortField] = useState<keyof Socio>("creado_en");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -120,8 +119,7 @@ export default function AdminPanel() {
   const [editingMember, setEditingMember] = useState<Socio | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     email: "", telefono: "", direccion: "", estado: "", municipio: "",
-    contacto_emergencia: "", telefono_emergencia: "", padecimiento: "", plan: "Mensual",
-    incluye_inscripcion: false, promocion_pago_puntual: false,
+    contacto_emergencia: "", telefono_emergencia: "", padecimiento: "",
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -131,8 +129,7 @@ export default function AdminPanel() {
     setEditForm({
       email: m.email, telefono: m.telefono, direccion: m.direccion || "", estado: m.estado,
       municipio: m.municipio, contacto_emergencia: m.contacto_emergencia || "",
-      telefono_emergencia: m.telefono_emergencia || "", padecimiento: m.padecimiento || "", plan: m.plan,
-      incluye_inscripcion: m.incluye_inscripcion, promocion_pago_puntual: m.promocion_pago_puntual,
+      telefono_emergencia: m.telefono_emergencia || "", padecimiento: m.padecimiento || "",
     });
     setEditingMember(m);
   };
@@ -151,9 +148,6 @@ export default function AdminPanel() {
       p_contacto_emergencia: editForm.contacto_emergencia.trim() || null,
       p_telefono_emergencia: editForm.telefono_emergencia.trim() || null,
       p_padecimiento: editForm.padecimiento.trim() || null,
-      p_plan: editForm.plan,
-      p_incluye_inscripcion: editForm.incluye_inscripcion,
-      p_promocion_pago_puntual: editForm.promocion_pago_puntual,
     });
     setSavingEdit(false);
     if (error) { setEditError(error.message || "No se pudo guardar la edición."); return; }
@@ -206,18 +200,17 @@ export default function AdminPanel() {
         m.telefono.includes(q)
       );
     }
-    if (filterPlan !== "Todos") list = list.filter(m => m.plan === filterPlan);
     list.sort((a, b) => {
       let va: any = a[sortField] ?? "", vb: any = b[sortField] ?? "";
       if (typeof va === "string") { va = va.toLowerCase(); vb = String(vb).toLowerCase(); }
       return sortDir === "asc" ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
     });
     return list;
-  }, [members, search, filterPlan, sortField, sortDir]);
+  }, [members, search, sortField, sortDir]);
 
   // Volver a la página 1 cada vez que cambian los filtros, orden, o la fuente de datos —
   // evita quedarse en una página vacía tras filtrar.
-  useEffect(() => { setPage(1); }, [search, filterPlan, sortField, sortDir, includeDeleted]);
+  useEffect(() => { setPage(1); }, [search, sortField, sortDir, includeDeleted]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -229,7 +222,6 @@ export default function AdminPanel() {
   const activos = members.filter(m => !m.eliminado_en);
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" });
   const registrosMes = activos.filter(m => fechaHoraRegistro(m.creado_en).fecha.startsWith(hoy.slice(0, 7))).length;
-  const planCount = PLANES.map(p => ({ plan: p, count: activos.filter(m => m.plan === p).length }));
   const conPad = activos.filter(m => m.padecimiento).length;
   const nuevos = activos.filter(esNuevo);
   const ultimosRegistros = useMemo(
@@ -301,7 +293,7 @@ export default function AdminPanel() {
         {activeTab === "estadisticas" && (
           <StatsTab
             totalActivos={activos.length} registrosMes={registrosMes} nuevosCount={nuevos.length}
-            conPadecimiento={conPad} planCount={planCount} ultimosRegistros={ultimosRegistros}
+            conPadecimiento={conPad} ultimosRegistros={ultimosRegistros}
             onSelectMember={m => { setSelectedMember(m); setActiveTab("socios"); }}
           />
         )}
@@ -315,7 +307,6 @@ export default function AdminPanel() {
             members={members} filtered={filtered} paginated={paginated} loading={loading}
             includeDeleted={includeDeleted} onIncludeDeletedChange={setIncludeDeleted}
             search={search} onSearchChange={setSearch}
-            filterPlan={filterPlan} onFilterPlanChange={setFilterPlan}
             sortField={sortField} sortDir={sortDir} onSort={handleSort}
             currentPage={currentPage} totalPages={totalPages} onPageChange={setPage}
             downloadingPdfId={downloadingPdfId}

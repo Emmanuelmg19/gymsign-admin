@@ -1,5 +1,5 @@
 import type { Socio } from "../types";
-import { PLAN_COLOR, PLAN_BG, nombreCompleto, fechaHoraRegistro, formatoVencimiento, planLabel } from "../lib/format";
+import { nombreCompleto, fechaHoraRegistro } from "../lib/format";
 
 interface MemberDetailModalProps {
   member: Socio;
@@ -27,13 +27,11 @@ export default function MemberDetailModal({ member, firmaUrl, downloadingPdfId, 
         </div>
         <div style={{ padding: "20px 24px" }}>
           <div style={{ marginBottom: 16 }}>
-            <span style={{ background: PLAN_BG[member.plan], color: PLAN_COLOR[member.plan], fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>{planLabel(member)}</span>
-            <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 10 }}>Alta: {fechaHoraRegistro(member.creado_en).fecha} — {fechaHoraRegistro(member.creado_en).hora}</span>
-            <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 10 }}>Vence: {formatoVencimiento(member)}</span>
+            <span style={{ fontSize: 12, color: "#6b7280" }}>Alta: {fechaHoraRegistro(member.creado_en).fecha} — {fechaHoraRegistro(member.creado_en).hora}</span>
             {member.es_menor && <span style={{ fontSize: 11, color: "#1e40af", marginLeft: 10, background: "#eff6ff", padding: "2px 8px", borderRadius: 20 }}>Menor de edad</span>}
           </div>
           {([
-            ["Identificación", `${member.tipo_identificacion} – ${member.numero_identificacion}`],
+            ["Identificación", member.tipo_identificacion ? `${member.tipo_identificacion} – ${member.numero_identificacion}` : "—"],
             ["Correo", member.email],
             ["Teléfono", member.telefono],
             ["Fecha de nacimiento", member.fecha_nacimiento],

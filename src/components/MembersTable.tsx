@@ -1,5 +1,5 @@
-import type { Plan, Socio } from "../types";
-import { PLANES, PLAN_COLOR, PLAN_BG, inicial, nombreCompleto, fechaHoraRegistro, formatoVencimiento, esNuevo } from "../lib/format";
+import type { Socio } from "../types";
+import { inicial, nombreCompleto, fechaHoraRegistro, esNuevo } from "../lib/format";
 
 interface MembersTableProps {
   members: Socio[];
@@ -10,8 +10,6 @@ interface MembersTableProps {
   onIncludeDeletedChange: (v: boolean) => void;
   search: string;
   onSearchChange: (v: string) => void;
-  filterPlan: "Todos" | Plan;
-  onFilterPlanChange: (v: "Todos" | Plan) => void;
   sortField: keyof Socio;
   sortDir: "asc" | "desc";
   onSort: (field: keyof Socio) => void;
@@ -26,11 +24,11 @@ interface MembersTableProps {
   onRestore: (m: Socio) => void;
 }
 
-const COLUMNS = [["nombre", "Nombre"], ["plan", "Plan"], ["email", "Email"], ["telefono", "Teléfono"], ["creado_en", "Registro"], ["folio", "Folio"]] as const;
+const COLUMNS = [["nombre", "Nombre"], ["email", "Email"], ["telefono", "Teléfono"], ["creado_en", "Registro"], ["folio", "Folio"]] as const;
 
 export default function MembersTable({
   members, filtered, paginated, loading, includeDeleted, onIncludeDeletedChange,
-  search, onSearchChange, filterPlan, onFilterPlanChange,
+  search, onSearchChange,
   sortField, sortDir, onSort, currentPage, totalPages, onPageChange,
   downloadingPdfId, onView, onEdit, onDownloadPdf, onDelete, onRestore,
 }: MembersTableProps) {
@@ -52,11 +50,6 @@ export default function MembersTable({
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         <input value={search} onChange={e => onSearchChange(e.target.value)} placeholder="🔍  Buscar por nombre, email, folio o teléfono…"
           style={{ flex: 1, minWidth: 200, padding: "10px 14px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, outline: "none", color: "#111827", background: "#fff" }} />
-        <select value={filterPlan} onChange={e => onFilterPlanChange(e.target.value as "Todos" | Plan)}
-          style={{ padding: "10px 14px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 14, outline: "none", background: "#fff", color: "#374151" }}>
-          <option>Todos</option>
-          {PLANES.map(p => <option key={p}>{p}</option>)}
-        </select>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#374151", cursor: "pointer" }}>
           <input type="checkbox" checked={includeDeleted} onChange={e => onIncludeDeletedChange(e.target.checked)} />
           Incluir eliminados
@@ -73,15 +66,12 @@ export default function MembersTable({
                     {l}<SortIcon field={f as keyof Socio} />
                   </th>
                 ))}
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>
-                  Vencimiento
-                </th>
                 <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, color: "#6b7280", fontSize: 11, textTransform: "uppercase" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 14 }}>No se encontraron socios.</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 14 }}>No se encontraron socios.</td></tr>
               ) : paginated.map((m, i) => {
                 const nuevo = esNuevo(m);
                 const eliminado = !!m.eliminado_en;
@@ -102,19 +92,10 @@ export default function MembersTable({
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "11px 14px" }}>
-                      <span style={{ background: PLAN_BG[m.plan], color: PLAN_COLOR[m.plan], fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 20, whiteSpace: "nowrap" }}>{m.plan}</span>
-                      {(m.incluye_inscripcion || m.promocion_pago_puntual) && (
-                        <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 3 }}>
-                          {[m.incluye_inscripcion && "+ Inscripción", m.promocion_pago_puntual && "+ Promoción pago puntual"].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                    </td>
                     <td style={{ padding: "11px 14px", color: "#374151" }}>{m.email}</td>
                     <td style={{ padding: "11px 14px", color: "#374151", whiteSpace: "nowrap" }}>{m.telefono}</td>
                     <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{fechaHoraRegistro(m.creado_en).fecha}<br /><span style={{ fontSize: 11 }}>{fechaHoraRegistro(m.creado_en).hora}</span></td>
                     <td style={{ padding: "11px 14px", color: "#6b7280", fontFamily: "monospace", fontSize: 12 }}>{m.folio}</td>
-                    <td style={{ padding: "11px 14px", color: "#6b7280", whiteSpace: "nowrap" }}>{formatoVencimiento(m)}</td>
                     <td style={{ padding: "11px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
                       <button onClick={() => onView(m)}
                         style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", marginRight: 6 }}>

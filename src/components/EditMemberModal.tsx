@@ -1,6 +1,6 @@
-import type { Plan, Socio } from "../types";
+import type { Socio } from "../types";
 import { ESTADOS_MX } from "../types";
-import { PLANES, nombreCompleto } from "../lib/format";
+import { nombreCompleto } from "../lib/format";
 
 export interface EditForm {
   email: string;
@@ -11,9 +11,6 @@ export interface EditForm {
   contacto_emergencia: string;
   telefono_emergencia: string;
   padecimiento: string;
-  plan: Plan;
-  incluye_inscripcion: boolean;
-  promocion_pago_puntual: boolean;
 }
 
 interface EditMemberModalProps {
@@ -46,7 +43,7 @@ export default function EditMemberModal({ member, form, onFormChange, saving, er
         </div>
         <div style={{ padding: "20px 24px" }}>
           <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#1e40af" }}>Solo datos de contacto y plan. Nombre, identificación y fecha de nacimiento no son editables aquí porque ya están en el contrato firmado.</p>
+            <p style={{ margin: 0, fontSize: 12, color: "#1e40af" }}>Solo datos de contacto. Nombre, identificación y fecha de nacimiento no son editables aquí porque ya están en el contrato firmado.</p>
           </div>
           <div style={{ marginBottom: 12 }}>
             <label style={labelStyle}>Correo electrónico</label>
@@ -86,23 +83,6 @@ export default function EditMemberModal({ member, form, onFormChange, saving, er
           <div style={{ marginBottom: 12 }}>
             <label style={labelStyle}>Padecimiento médico</label>
             <input type="text" value={form.padecimiento} onChange={e => set("padecimiento", e.target.value)} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={labelStyle}>Plan</label>
-            <select value={form.plan} onChange={e => set("plan", e.target.value as Plan)}
-              style={{ ...inputStyle, background: "#fff" }}>
-              {PLANES.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
-              <input type="checkbox" checked={form.incluye_inscripcion} onChange={e => set("incluye_inscripcion", e.target.checked)} />
-              Incluye cuota de inscripción
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
-              <input type="checkbox" checked={form.promocion_pago_puntual} onChange={e => set("promocion_pago_puntual", e.target.checked)} />
-              Aplica promoción por pago puntual
-            </label>
           </div>
           {error && <p style={{ color: "#ef4444", fontSize: 12, margin: "0 0 14px" }}>{error}</p>}
           <div style={{ display: "flex", gap: 10 }}>

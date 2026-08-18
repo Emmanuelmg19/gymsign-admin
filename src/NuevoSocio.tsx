@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { supabase } from "./supabaseClient";
-import type { Plan, Socio, TipoIdentificacion, Tutor } from "./types";
+import type { Socio, TipoIdentificacion, Tutor } from "./types";
 import { buildAvisoPrivacidad, buildConsentimientoAdulto, buildConsentimientoMenor, fechaContratoMX, nombreCompletoSocio } from "./contrato";
 
 const STEPS = ["Datos del Socio", "Contrato & T&C", "Firma Digital", "Confirmación"];
-const PLANES: Plan[] = ["Mensual", "Semana", "Quincena", "Visita"];
 const IDENTIFICACIONES: TipoIdentificacion[] = ["INE", "CURP", "Pasaporte", "Licencia", "Visa"];
 const ESTADOS_MX = [
   "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -51,7 +50,7 @@ interface FormState {
   tipoIdentificacion: TipoIdentificacion; numeroIdentificacion: string;
   direccion: string; estado: string; municipio: string;
   contactoEmergencia: string; telefonoEmergencia: string;
-  plan: Plan; incluyeInscripcion: boolean; promocionPagoPuntual: boolean; padecimiento: string;
+  padecimiento: string;
   tutorNombre: string; tutorApellido: string; tutorTelefono: string; tutorParentesco: string;
   tutorTipoIdentificacion: TipoIdentificacion; tutorNumeroIdentificacion: string;
 }
@@ -60,7 +59,7 @@ const initialForm: FormState = {
   fechaDia: "", fechaMes: "", fechaAnio: "", fechaNacimiento: "",
   tipoIdentificacion: "INE", numeroIdentificacion: "",
   direccion: "", estado: "Hidalgo", municipio: "",
-  contactoEmergencia: "", telefonoEmergencia: "", plan: "Mensual", incluyeInscripcion: false, promocionPagoPuntual: false, padecimiento: "",
+  contactoEmergencia: "", telefonoEmergencia: "", padecimiento: "",
   tutorNombre: "", tutorApellido: "", tutorTelefono: "", tutorParentesco: "",
   tutorTipoIdentificacion: "INE", tutorNumeroIdentificacion: "",
 };
@@ -156,7 +155,7 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
       const hoy = new Date().toISOString().split("T")[0];
       if (form.fechaNacimiento > hoy) e.fechaNacimiento = "No puede ser una fecha futura";
     }
-    if (!form.numeroIdentificacion.trim()) e.numeroIdentificacion = "Requerido";
+    if (!esMenor && !form.numeroIdentificacion.trim()) e.numeroIdentificacion = "Requerido";
     if (!form.municipio.trim()) e.municipio = "Requerido";
     if (form.telefonoEmergencia.trim() && !/^\d{10}$/.test(form.telefonoEmergencia.trim())) e.telefonoEmergencia = "Debe tener 10 dígitos";
     if (esMenor) {
@@ -172,18 +171,6 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
   const handleFieldChange = (name: string, val: string) => {
     setForm(f => ({ ...f, [name]: val }));
     setErrors(ev => ({ ...ev, [name]: "" }));
-  };
-
-  const handleCheckboxChange = (name: "incluyeInscripcion" | "promocionPagoPuntual") => {
-    setForm(f => ({ ...f, [name]: !f[name] }));
-  };
-
-  const planLabel = () => {
-    const extras = [
-      form.incluyeInscripcion ? "Inscripción" : null,
-      form.promocionPagoPuntual ? "Promoción por pago puntual" : null,
-    ].filter(Boolean);
-    return extras.length ? `${form.plan} (+ ${extras.join(", ")})` : form.plan;
   };
 
   const checkDuplicado = async () => {
@@ -225,17 +212,14 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
         p_email: form.email.trim(),
         p_telefono: form.telefono.trim(),
         p_fecha_nacimiento: form.fechaNacimiento,
-        p_tipo_identificacion: form.tipoIdentificacion,
-        p_numero_identificacion: form.numeroIdentificacion.trim(),
+        p_tipo_identificacion: esMenor ? null : form.tipoIdentificacion,
+        p_numero_identificacion: esMenor ? null : form.numeroIdentificacion.trim(),
         p_direccion: form.direccion.trim() || null,
         p_estado: form.estado,
         p_municipio: form.municipio.trim(),
         p_contacto_emergencia: form.contactoEmergencia.trim() || null,
         p_telefono_emergencia: form.telefonoEmergencia.trim() || null,
         p_padecimiento: form.padecimiento.trim() || null,
-        p_plan: form.plan,
-        p_incluye_inscripcion: form.incluyeInscripcion,
-        p_promocion_pago_puntual: form.promocionPagoPuntual,
         p_contrato_aceptado: true,
         p_firma_path: firmaPath,
         p_tutor: esMenor ? {
@@ -388,10 +372,12 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
             {errors.fechaNacimiento && <p style={{ color: "#ef4444", fontSize: 12, marginTop: 3 }}>{errors.fechaNacimiento}</p>}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "0 16px" }}>
-            <Field label="Tipo de identificación" name="tipoIdentificacion" options={IDENTIFICACIONES} value={form.tipoIdentificacion} onChange={handleFieldChange} />
-            <Field label="Número de identificación" name="numeroIdentificacion" required value={form.numeroIdentificacion} onChange={handleFieldChange} error={errors.numeroIdentificacion} />
-          </div>
+          {!esMenor && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "0 16px" }}>
+              <Field label="Tipo de identificación" name="tipoIdentificacion" options={IDENTIFICACIONES} value={form.tipoIdentificacion} onChange={handleFieldChange} />
+              <Field label="Número de identificación" name="numeroIdentificacion" required value={form.numeroIdentificacion} onChange={handleFieldChange} error={errors.numeroIdentificacion} />
+            </div>
+          )}
 
           {esMenor && (
             <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10, padding: 16, marginBottom: 14 }}>
@@ -411,17 +397,6 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
             </div>
           )}
 
-          <Field label="Plan" name="plan" options={PLANES} value={form.plan} onChange={handleFieldChange} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
-              <input type="checkbox" checked={form.incluyeInscripcion} onChange={() => handleCheckboxChange("incluyeInscripcion")} />
-              Incluye cuota de inscripción
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151", cursor: "pointer" }}>
-              <input type="checkbox" checked={form.promocionPagoPuntual} onChange={() => handleCheckboxChange("promocionPagoPuntual")} />
-              Aplica promoción por pago puntual
-            </label>
-          </div>
           <Field label="Dirección (calle y número)" name="direccion" value={form.direccion} onChange={handleFieldChange} />
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "0 16px" }}>
             <Field label="Estado" name="estado" options={ESTADOS_MX} value={form.estado} onChange={handleFieldChange} />
@@ -488,11 +463,10 @@ export default function NuevoSocio({ onDone }: { onDone: () => void }) {
           <div style={{ padding: "12px 0" }}>
             {[
               ["Nombre", nombreCompleto()],
-              ["Identificación", `${form.tipoIdentificacion} – ${form.numeroIdentificacion}`],
+              ...(esMenor ? [] : [["Identificación", `${form.tipoIdentificacion} – ${form.numeroIdentificacion}`]]),
               ["Email", form.email], ["Teléfono", form.telefono],
               ["Fecha de nacimiento", formatoFechaMX(form.fechaNacimiento)],
               ["Municipio / Estado", `${form.municipio || "—"}, ${form.estado}`],
-              ["Plan", planLabel()],
               ...(esMenor ? [["Tutor", `${form.tutorNombre} ${form.tutorApellido}`]] : []),
             ].map(([l, v]) => (
               <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #f3f4f6" }}>

@@ -1,19 +1,16 @@
 import type { Socio } from "../types";
-import { PLAN_COLOR, PLAN_BG, esNuevo, inicial, nombreCompleto, fechaHoraRegistro, planLabel } from "../lib/format";
-
-interface PlanCount { plan: Socio["plan"]; count: number }
+import { esNuevo, inicial, nombreCompleto, fechaHoraRegistro } from "../lib/format";
 
 interface StatsTabProps {
   totalActivos: number;
   registrosMes: number;
   nuevosCount: number;
   conPadecimiento: number;
-  planCount: PlanCount[];
   ultimosRegistros: Socio[];
   onSelectMember: (m: Socio) => void;
 }
 
-export default function StatsTab({ totalActivos, registrosMes, nuevosCount, conPadecimiento, planCount, ultimosRegistros, onSelectMember }: StatsTabProps) {
+export default function StatsTab({ totalActivos, registrosMes, nuevosCount, conPadecimiento, ultimosRegistros, onSelectMember }: StatsTabProps) {
   return (
     <div>
       <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 18 }}>Resumen General</h2>
@@ -28,21 +25,6 @@ export default function StatsTab({ totalActivos, registrosMes, nuevosCount, conP
             <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
             <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 2 }}>{val}</div>
             <div style={{ fontSize: 12, opacity: .8 }}>{label}</div>
-          </div>
-        ))}
-      </div>
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Distribución por Plan</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10, marginBottom: 24 }}>
-        {planCount.map(({ plan, count }) => (
-          <div key={plan} style={{ background: "#fff", border: `1.5px solid ${PLAN_COLOR[plan]}`, borderRadius: 12, padding: "14px 16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{plan}</span>
-              <span style={{ background: PLAN_BG[plan], color: PLAN_COLOR[plan], fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>{count}</span>
-            </div>
-            <div style={{ background: "#f3f4f6", borderRadius: 8, height: 8 }}>
-              <div style={{ width: `${totalActivos > 0 ? (count / totalActivos) * 100 : 0}%`, height: "100%", background: PLAN_COLOR[plan], borderRadius: 8 }} />
-            </div>
-            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 5 }}>{totalActivos > 0 ? Math.round((count / totalActivos) * 100) : 0}% del total</div>
           </div>
         ))}
       </div>
@@ -61,7 +43,6 @@ export default function StatsTab({ totalActivos, registrosMes, nuevosCount, conP
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <span style={{ background: PLAN_BG[m.plan], color: PLAN_COLOR[m.plan], fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, display: "block", marginBottom: 2 }}>{planLabel(m)}</span>
               <span style={{ fontSize: 11, color: "#9ca3af" }}>{fechaHoraRegistro(m.creado_en).fecha}</span>
             </div>
           </div>
