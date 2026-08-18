@@ -96,6 +96,8 @@ export function buildAvisoPrivacidad(): string[] {
 // en la base de datos (usado por el botón "Descargar contrato" del panel).
 export function buildContractHTML(socio: Socio, tutor: Tutor | null, firmaDataUrl: string | null): string {
   const nombreCompleto = esc(nombreCompletoSocio(socio));
+  const nombreFirmante = socio.es_menor && tutor ? esc(`${tutor.nombre} ${tutor.apellido}`) : nombreCompleto;
+  const etiquetaFirma = socio.es_menor ? "Firma digital del padre, madre o tutor" : "Firma digital del socio";
   const fecha = new Date(socio.creado_en);
   const dateStr = fecha.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Mexico_City" });
   const timeStr = fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", timeZone: "America/Mexico_City" });
@@ -155,7 +157,7 @@ td .v{font-size:13px;color:#111827;font-weight:500}
 <div class="clauses">${buildAvisoPrivacidad().map(p=>`<p style="margin-bottom:10px">${p}</p>`).join("")}</div>
 <div class="accept">✅ El socio${socio.es_menor ? " y su tutor declaran" : " declara"} haber leído, comprendido y aceptado en su totalidad el Consentimiento Informado y Exoneración de Responsabilidad y el Aviso de Privacidad.</div>
 <table class="sig"><tr>
-  <td><span class="l">Firma digital del socio</span>${firmaDataUrl?`<img src="${firmaDataUrl}" alt="Firma"/>`:"<p style='font-size:12px;color:#9ca3af'>Firma no disponible</p>"}<div class="sig-name">${nombreCompleto}</div></td>
+  <td><span class="l">${etiquetaFirma}</span>${firmaDataUrl?`<img src="${firmaDataUrl}" alt="Firma"/>`:"<p style='font-size:12px;color:#9ca3af'>Firma no disponible</p>"}<div class="sig-name">${nombreFirmante}</div></td>
   <td><span class="l">Fecha y hora de firma</span>
     <p style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px">${dateStr}</p>
     <p style="font-size:12px;color:#374151;margin-bottom:6px">${timeStr} hrs</p></td>
